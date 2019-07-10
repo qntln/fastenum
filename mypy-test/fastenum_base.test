@@ -1,0 +1,32 @@
+[case fastenum_base_int]
+
+from fastenum import Enum
+
+class Color(Enum):
+    RED = 1
+    GREEN = 2
+    BLUE = 3
+
+reveal_type(Color.RED) # E: Revealed type is 'main.Color'
+reveal_type(Color.GREEN) # E: Revealed type is 'main.Color'
+reveal_type(Color.GREEN.value) # E: Revealed type is 'Any'
+reveal_type(Color.GREEN.name) # E: Revealed type is 'builtins.str'
+
+[/CASE]
+
+
+[case fastenum_base_str]
+
+from fastenum import Enum
+
+class Color(Enum):
+    RED = 'a'
+    GREEN = 'b'
+    BLUE = 'c'
+
+reveal_type(Color.RED) # E: Revealed type is 'main.Color'
+reveal_type(Color.GREEN) # E: Revealed type is 'main.Color'
+reveal_type(Color.GREEN.value) # E: Revealed type is 'Any'
+reveal_type(Color.GREEN.name) # E: Revealed type is 'builtins.str'
+
+[/CASE]

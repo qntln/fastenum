@@ -1,5 +1,5 @@
 import os
-from distutils.core import setup
+from setuptools import setup
 
 
 
@@ -20,6 +20,9 @@ setup(
 	packages = [
 		'fastenum',
 	],
+	package_data = {
+		'fastenum': ['py.typed'],
+	},
 	classifiers = [
 		'Development Status :: 4 - Beta',
 		'License :: OSI Approved :: Apache Software License',

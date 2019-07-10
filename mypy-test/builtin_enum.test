@@ -1,0 +1,16 @@
+[case enum_example]
+# Make sure our fastenum plugin
+# won't break builtin enum module
+
+from enum import Enum
+
+class Color(Enum):
+    RED: int = 1
+    GREEN: int = 2
+    BLUE: int = 3
+
+reveal_type(Color.RED) # E: Revealed type is 'main.Color'
+reveal_type(Color.GREEN) # E: Revealed type is 'main.Color'
+reveal_type(Color.GREEN.value) # E: Revealed type is 'Any'
+
+[/CASE]

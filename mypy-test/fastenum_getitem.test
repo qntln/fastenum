@@ -1,0 +1,20 @@
+[case fastenum_getitem]
+
+from fastenum import Enum
+
+class Color(Enum):
+    RED = 1
+    GREEN = 2
+    BLUE = 3
+
+
+class Strings(Enum):
+    A = 'a'
+    B = 'b'
+    C = 'c'
+
+
+reveal_type(Color['RED']) # E: Revealed type is 'main.Color'
+reveal_type(Strings['A']) # E: Revealed type is 'main.Strings'
+
+[/CASE]
