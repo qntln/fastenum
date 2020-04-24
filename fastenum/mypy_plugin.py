@@ -124,7 +124,7 @@ def _define_method(
 	for arg in arguments:
 		assert arg.type_annotation, 'All arguments must be fully typed.'
 		arg_types.append(arg.type_annotation)
-		arg_names.append(arg.variable.name())
+		arg_names.append(get_name(arg.variable))
 		arg_kinds.append(arg.kind)
 
 	# Creating type of a callable, this is equialent to writing
@@ -229,7 +229,7 @@ def transform_enum_class_def(context: mypy.plugin.ClassDefContext) -> None:
 	# To get over that we remove `int` base class from that class def.
 	info.bases = [
 		base for base in info.bases
-		if base.type.fullname() != 'builtins.int'
+		if get_fullname(base.type) != 'builtins.int'
 	]
 
 	# First clear all `nodes.AssignmentStmt` in class.
@@ -272,7 +272,7 @@ def transform_enum_class_def(context: mypy.plugin.ClassDefContext) -> None:
 	# it should return itself.
 	# So as a hotfix we redefine these methods on our inherited enum class
 	# to have more specific typing (which is still not violating original metaclass typing)
-	_define_method(context, metaclass_type.type, metaclass_type.type.fullname(), '__next__', [], self_type)
+	_define_method(context, metaclass_type.type, get_fullname(metaclass_type.type), '__next__', [], self_type)
 
 	# Example how these all lines below would look like in Python:
 	#
@@ -284,7 +284,7 @@ def transform_enum_class_def(context: mypy.plugin.ClassDefContext) -> None:
 	_define_method(
 		context,
 		metaclass_type.type,
-		metaclass_type.type.fullname(),
+		get_fullname(metaclass_type.type),
 		'__getitem__',
 		[
 			nodes.Argument(nodes.Var('cls', self_type), self_type, None, nodes.ARG_POS),
@@ -459,7 +459,7 @@ def transform_enum_type(context: mypy.plugin.AnalyzeTypeContext) -> types.Type:
 	meta_enum_instance = types.Instance(meta_info, [])
 	self_tvar_expr = nodes.TypeVarExpr(
 		'_EnumMetaType',
-		f'{meta_info.fullname()}._EnumMetaType',
+		f'{get_fullname(meta_info)}._EnumMetaType',
 		[],
 		meta_enum_instance
 	)
@@ -467,7 +467,7 @@ def transform_enum_type(context: mypy.plugin.AnalyzeTypeContext) -> types.Type:
 
 	self_tvar_def = types.TypeVarDef(
 		'_EnumMetaType',
-		f'{meta_info.fullname()}._EnumMetaType',
+		f'{get_fullname(meta_info)}._EnumMetaType',
 		-1,
 		[],
 		meta_enum_instance
@@ -594,3 +594,20 @@ def plugin(_: str) -> Type[FastEnumPlugin]:
 	# The first argument (mypy version) can be used to have multiple versions of this
 	# plugin for multiple mypy versions.
 	return FastEnumPlugin
+
+
+# Taken and modified from https://github.com/samuelcolvin/pydantic/pull/1058/files#diff-ef0fe5e1687ec75a3d9fe2d593799ff8R669
+def get_fullname(x: Union[nodes.FuncBase, nodes.SymbolNode]) -> str:
+	'''
+	Used for compatibility with mypy 0.740; can be dropped once support for 0.740 is dropped.
+	'''
+	fn = x.fullname
+	return fn() if callable(fn) else fn
+
+
+def get_name(x: Union[nodes.FuncBase, nodes.SymbolNode]) -> str:
+	'''
+	Used for compatibility with mypy 0.740; can be dropped once support for 0.740 is dropped.
+	'''
+	fn = x.fullname
+	return fn() if callable(fn) else fn
