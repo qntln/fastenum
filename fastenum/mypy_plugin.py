@@ -272,7 +272,16 @@ def transform_enum_class_def(context: mypy.plugin.ClassDefContext) -> None:
 	# it should return itself.
 	# So as a hotfix we redefine these methods on our inherited enum class
 	# to have more specific typing (which is still not violating original metaclass typing)
-	_define_method(context, metaclass_type.type, get_fullname(metaclass_type.type), '__next__', [], self_type)
+	_define_method(
+		context,
+		metaclass_type.type,
+		get_fullname(metaclass_type.type),
+		'__next__',
+		[
+			nodes.Argument(nodes.Var('self', self_type), self_type, None, nodes.ARG_POS),
+		],
+		self_type
+	)
 
 	# Example how these all lines below would look like in Python:
 	#
@@ -474,14 +483,6 @@ def transform_enum_type(context: mypy.plugin.AnalyzeTypeContext) -> types.Type:
 	)
 	self_tvar_type = types.TypeVarType(self_tvar_def)
 
-	# Define base __iter__ and __next__ for our meta class and use TypeVar `_EnumMetaType` as its return value
-	# so we can say its return value is bound to all children.
-	# See more comments about the definition in:
-	#	- `transform_enum_class_def` handler
-	#	- and `_define_method` docs + comments
-	_define_method(context, meta_info, context.type.name, '__iter__', [], self_tvar_type)
-	_define_method(context, meta_info, context.type.name, '__next__', [], self_tvar_type)
-
 	# Same way with __getitem__
 	_define_method(
 		context,
@@ -511,6 +512,32 @@ def transform_enum_type(context: mypy.plugin.AnalyzeTypeContext) -> types.Type:
 		types.NoneTyp()
 	)
 
+	# Define base __iter__ and __next__ for our meta class and use TypeVar `_EnumMetaType` as its return value
+	# so we can say its return value is bound to all children.
+	# See more comments about the definition in:
+	#	- `transform_enum_class_def` handler
+	#	- and `_define_method` docs + comments
+	_define_method(
+		context,
+		meta_info,
+		context.type.name,
+		'__iter__',
+		[
+			nodes.Argument(nodes.Var('self', meta_enum_instance), meta_enum_instance, None, nodes.ARG_POS),
+		],
+		self_tvar_type
+	)
+	_define_method(
+		context,
+		meta_info,
+		context.type.name,
+		'__next__',
+		[
+			nodes.Argument(nodes.Var('self', meta_enum_instance), meta_enum_instance, None, nodes.ARG_POS),
+		],
+		self_tvar_type
+	)
+
 	# Because enums can be used even in comparison expression like `A > B`
 	# we have to support these methods in our fake enum class too.
 	def def_bool_method(name: str) -> None:
@@ -536,8 +563,8 @@ def transform_enum_type(context: mypy.plugin.AnalyzeTypeContext) -> types.Type:
 	#	class EnumMeta(builtins.type):
 	#		_EnumMetaType = TypeVar('_EnumMetaType', bound = 'EnumMeta')
 	#
-	#		def __iter__() -> _EnumMetaType: pass
-	#		def __next__() -> _EnumMetaType: pass
+	#		def __iter__(self: 'EnumMeta') -> _EnumMetaType: pass
+	#		def __next__(self: 'EnumMeta') -> _EnumMetaType: pass
 	#		def __getitem__(cls: 'EnumMeta', key: str) -> 'EnumMeta': pass
 	#
 	#
