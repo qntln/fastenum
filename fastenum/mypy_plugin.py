@@ -286,7 +286,7 @@ def transform_enum_class_def(context: mypy.plugin.ClassDefContext) -> None:
 	# Example how these all lines below would look like in Python:
 	#
 	#  ::
-	#    def __getitem__(cls: <self_type>, key: str) -> <self_type>:
+	#    def __getitem__(cls: Type[<self_type>], key: str) -> <self_type>:
 	#      pass
 	#
 	#
@@ -296,7 +296,7 @@ def transform_enum_class_def(context: mypy.plugin.ClassDefContext) -> None:
 		get_fullname(metaclass_type.type),
 		'__getitem__',
 		[
-			nodes.Argument(nodes.Var('cls', self_type), self_type, None, nodes.ARG_POS),
+			nodes.Argument(nodes.Var('cls', metaclass_type), metaclass_type, None, nodes.ARG_POS),
 			nodes.Argument(nodes.Var('key', str_type), str_type, None, nodes.ARG_POS),
 		],
 		self_type
