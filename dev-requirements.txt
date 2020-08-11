@@ -1,4 +1,5 @@
 pytest==6.0.1
+pytest-benchmark==3.2.3
 pytest-cov==2.10.0
 pytest-mypy-plugins==1.4.0
 ql-cq==0.26.0
