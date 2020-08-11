@@ -1,0 +1,28 @@
+# Test various ways how to import fastenum
+# as mypy module is registered based on name used in AST
+
+- case: fastenum_import_from
+  main: |
+    from fastenum import Enum
+
+    class Color(Enum):
+        RED = 1
+        GREEN = 2
+        BLUE = 3
+
+    reveal_type(Color.RED) # N: Revealed type is 'main.Color'
+    reveal_type(Color.GREEN) # N: Revealed type is 'main.Color'
+    reveal_type(Color.GREEN.value) # N: Revealed type is 'Any'
+
+- case: fastenum_import_full
+  main: |
+    import fastenum
+
+    class Color(fastenum.Enum):
+        RED = 1
+        GREEN = 2
+        BLUE = 3
+
+    reveal_type(Color.RED) # N: Revealed type is 'main.Color'
+    reveal_type(Color.GREEN) # N: Revealed type is 'main.Color'
+    reveal_type(Color.GREEN.value) # N: Revealed type is 'Any'

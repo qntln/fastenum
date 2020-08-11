@@ -1,0 +1,35 @@
+- case: fastenum_metaclass
+  main: |
+    from typing import TypeVar, Type
+
+    class MetaclassExample(type):
+      def example(cls) -> str:
+        return 'Hello'
+
+      def __iter__(cls) -> 'MetaclassExample':
+        return cls
+
+      def __next__(cls) -> str:
+        return 'a'
+
+
+    T = TypeVar('T', bound = 'ExampleClass')
+
+
+    class ExampleClass(metaclass = MetaclassExample):
+
+      @classmethod
+      def hello(cls: Type[T]) -> Type[T]:
+        return cls
+
+
+    class Child(ExampleClass):
+      pass
+
+    reveal_type(ExampleClass.hello()) # N: Revealed type is 'Type[main.ExampleClass*]'
+    reveal_type(Child.hello()) # N: Revealed type is 'Type[main.Child*]'
+
+    reveal_type(Child.example()) # N: Revealed type is 'builtins.str'
+
+    for i in Child:
+      reveal_type(i) # N: Revealed type is 'builtins.str'

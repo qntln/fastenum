@@ -6,7 +6,7 @@ metaclasses properly.
 More on this topic https://mypy.readthedocs.io/en/latest/metaclasses.html
 '''
 
-from typing import Any, Tuple, Iterator, Type
+from typing import cast, Any, Tuple, Iterator, Type
 import collections
 
 
@@ -24,7 +24,14 @@ class EnumMeta(type):
 		# pylint: disable=unused-argument
 		return collections.OrderedDict()
 
-	def __new__(mcs, cls: str, bases: Tuple[type, ...], classdict: collections.OrderedDict) -> type:
+	# Not sure why we get 'Incompatible return type for "__new__" (returns "Enum", but must return
+	#   a subtype of "EnumMeta")' here:
+	def __new__(  # type: ignore
+		mcs,
+		cls: str,
+		bases: Tuple[type, ...],
+		classdict: collections.OrderedDict,
+	) -> 'EnumMeta':
 		# pylint: disable=protected-access
 		enum_class = super().__new__(mcs, cls, bases, classdict)
 		# name->value map
@@ -52,7 +59,7 @@ class EnumMeta(type):
 				except TypeError:
 					pass
 
-		return enum_class
+		return cast(EnumMeta, enum_class)
 
 	def __call__(cls, value: Any) -> 'Enum':  # type: ignore
 		# For lookups like Color(Color.red)
