@@ -56,7 +56,6 @@ from mypy import nodes, types
 import mypy.plugin
 
 
-
 # Define under which names the mypy plugin should be registered
 REGISTER = {
 	'fastenum.Enum',
@@ -91,7 +90,7 @@ def _define_method(
 	namespace: str,
 	name: str,
 	arguments: List[nodes.Argument],
-	return_type: types.Type
+	return_type: types.Type,
 ) -> None:
 	'''
 	Helper function to define class level or instance level method.
@@ -138,19 +137,19 @@ def _define_method(
 	# This is needed so mypy knows that given function is bound to some class, module or something.
 	# So when we call it it can find its type back.
 	# The following line is equivalent to:
-	#	def <name>(<arguments>): pass
+	# 	def <name>(<arguments>): pass
 	# You can see it is without types - its just an AST node
 	func = nodes.FuncDef(name, arguments, nodes.Block([nodes.PassStmt()]))
 	# I don't know why but we have to add both links:
 	# 	- From class to method (few lines later)
-	#	- And from method to class (maybe needed so it can be seen as a bound method?)
+	# 	- And from method to class (maybe needed so it can be seen as a bound method?)
 	func.info = cls_info
 	# Specify method type (return type, argument types, ...)
 	# it is taken from previous :code:`signature` callable type we defined and just named
 	func.type = signature.with_name(name)
 	# We have to define fullname - this is normally filled by mypy's AST parser
 	# Fullname is required by mypy because this should be unique identifier for any object
-	func._fullname = f'{namespace}.{name}' # pylint: disable=protected-access
+	func._fullname = f'{namespace}.{name}'  # pylint: disable=protected-access
 	# This should not be required but mypy is then able to say where the error is happening
 	func.line = cls_info.line
 
@@ -158,10 +157,10 @@ def _define_method(
 	# Every class have :code:`names` attribute which is :code:`SymbolTable` instance and defines
 	# all attributes, methods.
 	# Entries in this table are :code:`SymbolTableNode` where you have to specify first argument kind:
-	#	LDEF: local definition
-	#	GDEF: global (module-level) definition
-	#	MDEF: class member definition
-	#	UNBOUND_IMPORTED: temporary kind for imported names
+	# 	LDEF: local definition
+	# 	GDEF: global (module-level) definition
+	# 	MDEF: class member definition
+	# 	UNBOUND_IMPORTED: temporary kind for imported names
 	# Then the AST node which defines a variable or a function definition.
 	# But this will just register that name on a given class but not that node to the AST of the class.
 	cls_info.names[name] = nodes.SymbolTableNode(nodes.MDEF, func, plugin_generated = True)
@@ -227,18 +226,15 @@ def transform_enum_class_def(context: mypy.plugin.ClassDefContext) -> None:
 	# which inherits from the default builtins.int
 	# and therefor our comparison methods are not compatible.
 	# To get over that we remove `int` base class from that class def.
-	info.bases = [
-		base for base in info.bases
-		if get_fullname(base.type) != 'builtins.int'
-	]
+	info.bases = [base for base in info.bases if get_fullname(base.type) != 'builtins.int']
 
 	# First clear all `nodes.AssignmentStmt` in class.
 	# These are basically class-level attributes defining enum values.
 	# This way we will remove the attribute assignment statement
 	# that mypy sees when the class is defined as:
 	#
-	#	class Color(Enum):
-	#		RED = 1
+	# 	class Color(Enum):
+	# 		RED = 1
 	#
 	# From this mypy creates :code:`AssignmentStmt` where RED = IntInstance(1)
 	# We remove this, so mypy see only class variables in :code:`info.names`
@@ -250,7 +246,8 @@ def transform_enum_class_def(context: mypy.plugin.ClassDefContext) -> None:
 	# also all inherited things will be still visible.
 	# This way we can tell mypy that this class has some attributes, it just is not defined in AST
 	context.cls.defs.body = [
-		node for node in context.cls.defs.body
+		node
+		for node in context.cls.defs.body
 		if not isinstance(node, nodes.AssignmentStmt)
 	]
 
@@ -278,9 +275,14 @@ def transform_enum_class_def(context: mypy.plugin.ClassDefContext) -> None:
 		get_fullname(metaclass_type.type),
 		'__next__',
 		[
-			nodes.Argument(nodes.Var('self', self_type), self_type, None, nodes.ARG_POS),
+			nodes.Argument(
+				nodes.Var('self', self_type),
+				self_type,
+				None,
+				nodes.ARG_POS,
+			),
 		],
-		self_type
+		self_type,
 	)
 
 	# Example how these all lines below would look like in Python:
@@ -299,7 +301,7 @@ def transform_enum_class_def(context: mypy.plugin.ClassDefContext) -> None:
 			nodes.Argument(nodes.Var('cls', metaclass_type), metaclass_type, None, nodes.ARG_POS),
 			nodes.Argument(nodes.Var('key', str_type), str_type, None, nodes.ARG_POS),
 		],
-		self_type
+		self_type,
 	)
 
 	# In the end we have to update type of our attributes to return the proper type.
@@ -397,7 +399,7 @@ def transform_enum_type(context: mypy.plugin.AnalyzeTypeContext) -> types.Type:
 	# Define meta class in fake module :code:`_fastenum`
 	# This is roughly equivalent to:
 	#
-	#	class EnumMeta(builtins.type): pass
+	# 	class EnumMeta(builtins.type): pass
 	#
 	# in module :code:`_fastenum`.
 	# We have to define two things: :code:`ClassDef` an AST node and it's type definition using :code:`TypeInfo`
@@ -418,11 +420,17 @@ def transform_enum_type(context: mypy.plugin.AnalyzeTypeContext) -> types.Type:
 	# Define Enum class which is using EnumMeta as its metaclass in the fake :code:`_fastenum` module
 	# This is very similar to the previous definition and it is roughly equivalent to:
 	#
-	#	class Enum(metaclass = EnumMeta): pass
+	# 	class Enum(metaclass = EnumMeta): pass
 	#
 	# Notice that we still define :code:`builtins.object` as it's parent
 	# even if we don't have to do it in Python3, but we have to do it here!
-	enum_cls = nodes.ClassDef('Enum', nodes.Block([nodes.PassStmt()]), [], [object_type], nodes.NameExpr('EnumMeta'))
+	enum_cls = nodes.ClassDef(
+		'Enum',
+		nodes.Block([nodes.PassStmt()]),
+		[],
+		[object_type],
+		nodes.NameExpr('EnumMeta'),
+	)
 	enum_cls.fullname = '_fastenum.Enum'
 	enum_info = nodes.TypeInfo(nodes.SymbolTable(), enum_cls, '_fastenum')
 	# Same as before we have to define all parents (even :code:`builtins.object`)
@@ -455,22 +463,22 @@ def transform_enum_type(context: mypy.plugin.AnalyzeTypeContext) -> types.Type:
 	#
 	# module `_fastenum`:
 	#
-	#	class EnumMeta(builtins.type): pass
+	# 	class EnumMeta(builtins.type): pass
 	#
-	#	class Enum(metaclass = EnumMeta):
-	#		name: str
-	#		value: Any
+	# 	class Enum(metaclass = EnumMeta):
+	# 		name: str
+	# 		value: Any
 	#
 
 	# Prepare TypeVar, all these lines are just:
-	#	_EnumMetaType = TypeVar('_EnumMetaType', bound = 'EnumMeta')
+	# 	_EnumMetaType = TypeVar('_EnumMetaType', bound = 'EnumMeta')
 	# We just have to describe expressions and definitions separately for mypy
 	meta_enum_instance = types.Instance(meta_info, [])
 	self_tvar_expr = nodes.TypeVarExpr(
 		'_EnumMetaType',
 		f'{get_fullname(meta_info)}._EnumMetaType',
 		[],
-		meta_enum_instance
+		meta_enum_instance,
 	)
 	meta_info.names['_EnumMetaType'] = nodes.SymbolTableNode(nodes.MDEF, self_tvar_expr)
 
@@ -479,7 +487,7 @@ def transform_enum_type(context: mypy.plugin.AnalyzeTypeContext) -> types.Type:
 		f'{get_fullname(meta_info)}._EnumMetaType',
 		-1,
 		[],
-		meta_enum_instance
+		meta_enum_instance,
 	)
 	self_tvar_type = types.TypeVarType(self_tvar_def)
 
@@ -493,7 +501,7 @@ def transform_enum_type(context: mypy.plugin.AnalyzeTypeContext) -> types.Type:
 			nodes.Argument(nodes.Var('cls', meta_enum_instance), meta_enum_instance, None, nodes.ARG_POS),
 			nodes.Argument(nodes.Var('key', str_type), str_type, None, nodes.ARG_POS),
 		],
-		self_tvar_type
+		self_tvar_type,
 	)
 
 	# We also have to support constructor interface of enum, so when someone calls Enum('value').
@@ -509,23 +517,28 @@ def transform_enum_type(context: mypy.plugin.AnalyzeTypeContext) -> types.Type:
 			nodes.Argument(nodes.Var('self', enum_instance), enum_instance, None, nodes.ARG_POS),
 			nodes.Argument(nodes.Var('value', any_type), any_type, None, nodes.ARG_POS),
 		],
-		types.NoneTyp()
+		types.NoneTyp(),
 	)
 
 	# Define base __iter__ and __next__ for our meta class and use TypeVar `_EnumMetaType` as its return value
 	# so we can say its return value is bound to all children.
 	# See more comments about the definition in:
-	#	- `transform_enum_class_def` handler
-	#	- and `_define_method` docs + comments
+	# 	- `transform_enum_class_def` handler
+	# 	- and `_define_method` docs + comments
 	_define_method(
 		context,
 		meta_info,
 		context.type.name,
 		'__iter__',
 		[
-			nodes.Argument(nodes.Var('self', meta_enum_instance), meta_enum_instance, None, nodes.ARG_POS),
+			nodes.Argument(
+				nodes.Var('self', meta_enum_instance),
+				meta_enum_instance,
+				None,
+				nodes.ARG_POS,
+			),
 		],
-		self_tvar_type
+		self_tvar_type,
 	)
 	_define_method(
 		context,
@@ -533,9 +546,14 @@ def transform_enum_type(context: mypy.plugin.AnalyzeTypeContext) -> types.Type:
 		context.type.name,
 		'__next__',
 		[
-			nodes.Argument(nodes.Var('self', meta_enum_instance), meta_enum_instance, None, nodes.ARG_POS),
+			nodes.Argument(
+				nodes.Var('self', meta_enum_instance),
+				meta_enum_instance,
+				None,
+				nodes.ARG_POS,
+			),
 		],
-		self_tvar_type
+		self_tvar_type,
 	)
 
 	# Because enums can be used even in comparison expression like `A > B`
@@ -550,8 +568,9 @@ def transform_enum_type(context: mypy.plugin.AnalyzeTypeContext) -> types.Type:
 				nodes.Argument(nodes.Var('self', enum_instance), enum_instance, None, nodes.ARG_POS),
 				nodes.Argument(nodes.Var('other', enum_instance), enum_instance, None, nodes.ARG_POS),
 			],
-			bool_type
+			bool_type,
 		)
+
 	for name in ('le', 'eq', 'ne', 'ge', 'gt'):
 		def_bool_method(f'__{name}__')
 
@@ -560,25 +579,25 @@ def transform_enum_type(context: mypy.plugin.AnalyzeTypeContext) -> types.Type:
 	#
 	# module `_fastenum`:
 	#
-	#	class EnumMeta(builtins.type):
-	#		_EnumMetaType = TypeVar('_EnumMetaType', bound = 'EnumMeta')
+	# 	class EnumMeta(builtins.type):
+	# 		_EnumMetaType = TypeVar('_EnumMetaType', bound = 'EnumMeta')
 	#
-	#		def __iter__(self: 'EnumMeta') -> _EnumMetaType: pass
-	#		def __next__(self: 'EnumMeta') -> _EnumMetaType: pass
-	#		def __getitem__(cls: 'EnumMeta', key: str) -> 'EnumMeta': pass
+	# 		def __iter__(self: 'EnumMeta') -> _EnumMetaType: pass
+	# 		def __next__(self: 'EnumMeta') -> _EnumMetaType: pass
+	# 		def __getitem__(cls: 'EnumMeta', key: str) -> 'EnumMeta': pass
 	#
 	#
-	#	class Enum(metaclass = EnumMeta):
-	#		name: str
-	#		value: Any
+	# 	class Enum(metaclass = EnumMeta):
+	# 		name: str
+	# 		value: Any
 	#
-	#		def __init__(self, value: Any) -> None: pass
+	# 		def __init__(self, value: Any) -> None: pass
 	#
-	#		def __le__(self, other: Enum) -> bool: pass
-	#		def __eq__(self, other: Enum) -> bool: pass
-	#		def __ne__(self, other: Enum) -> bool: pass
-	#		def __ge__(self, other: Enum) -> bool: pass
-	#		def __gt__(self, other: Enum) -> bool: pass
+	# 		def __le__(self, other: Enum) -> bool: pass
+	# 		def __eq__(self, other: Enum) -> bool: pass
+	# 		def __ne__(self, other: Enum) -> bool: pass
+	# 		def __ge__(self, other: Enum) -> bool: pass
+	# 		def __gt__(self, other: Enum) -> bool: pass
 	#
 	# And we have to return new type for our `Enum` class which will be our new `Enum`
 	return types.Instance(enum_info, [])
@@ -602,8 +621,10 @@ class FastEnumPlugin(mypy.plugin.Plugin):
 
 		return super().get_base_class_hook(fullname)
 
-
-	def get_type_analyze_hook(self, fullname: str) -> Optional[Callable[[mypy.plugin.AnalyzeTypeContext], types.Type]]:
+	def get_type_analyze_hook(
+		self,
+		fullname: str,
+	) -> Optional[Callable[[mypy.plugin.AnalyzeTypeContext], types.Type]]:
 		'''
 		Mypy does not see metaclass usage on the Enum side properly
 		for this we have to re-define these types in our plugin.

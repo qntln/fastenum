@@ -5,4 +5,5 @@ pyflakes-ext>=1.0.1
 pytest==4.4.1
 pytest-cov==2.7.1
 ql-cq==0.20.9
+ql-orange==1.0.3
 pytest-mypy-plugins==0.3.0

@@ -2,7 +2,6 @@ import os
 from setuptools import setup
 
 
-
 def read(relpath: str) -> str:
 	with open(os.path.join(os.path.dirname(__file__), relpath)) as f:
 		return f.read()
@@ -11,7 +10,7 @@ def read(relpath: str) -> str:
 setup(
 	name = 'fastenum',
 	version = read('version.txt').strip(),
-	description = 'Faster drop-in replacement of Python\'s enum',
+	description = "Faster drop-in replacement of Python's enum",
 	long_description = read('README.rst'),
 	author = 'Quantlane',
 	author_email = 'code@quantlane.com',
@@ -21,7 +20,9 @@ setup(
 		'fastenum',
 	],
 	package_data = {
-		'fastenum': ['py.typed'],
+		'fastenum': [
+			'py.typed'
+		],
 	},
 	classifiers = [
 		'Development Status :: 4 - Beta',
@@ -29,5 +30,5 @@ setup(
 		'Natural Language :: English',
 		'Programming Language :: Python :: 3 :: Only',
 		'Programming Language :: Python :: 3.5',
-	]
+	],
 )
