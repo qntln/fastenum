@@ -1,0 +1,10 @@
+repos:
+- hooks:
+  - entry: orange
+    id: orange
+    language: system
+    name: orange
+    require_serial: true
+    types:
+    - python
+  repo: local

@@ -7,3 +7,4 @@ ql-orange==1.0.3
 # We have to pin this explicitly because pip is prone to picking up the unbounded 'mypy>=0.730' requirement
 # from 'pytest-mypy-plugins' instead of the pin from ql-cq. Looking forward to the new pip resolver...
 mypy==0.740
+pre-commit==2.6.0
